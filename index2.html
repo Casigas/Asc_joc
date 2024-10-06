@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ro">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Quiz Piese Hardware</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .container {
+            margin-top: 50px;
+        }
+
+        .quiz-container {
+            background-color: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 30px;
+        }
+
+        .question {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        .answer-input {
+            font-size: 18px;
+            padding: 10px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .btn-quiz {
+            font-size: 18px;
+            width: 100%;
+            padding: 10px;
+        }
+
+        .lives {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+
+        .result {
+            font-size: 20px;
+            margin-top: 30px;
+        }
+
+        #imageContainer img {
+            width: 300px;
+            margin-top: 20px;
+        }
+
+        #correctAnswers {
+            margin-top: 20px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="quiz-container text-center">
+            <h1>
+                <img src="https://raw.githubusercontent.com/Casigas/AndroidTema1/main/logoUnitBV.jpg" alt="Logo" style="width: 100px; vertical-align: middle; margin-right: 100px;">
+                Quiz Piese Hardware
+            </h1>
+
+            <form id="quizForm">
+                <div class="form-group">
+                    <label for="nameInput">Numele tău:</label>
+                    <input type="text" id="nameInput" class="form-control" placeholder="Introdu numele tău" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="difficultySelect">Alege dificultatea:</label>
+                    <select class="form-control" id="difficultySelect">
+                        <option value="easy">Ușor</option>
+                        <option value="medium">Mediu</option>
+                        <option value="hard">Greu</option>
+                    </select>
+                </div>
+
+                <button type="button" class="btn btn-primary btn-quiz" onclick="startQuiz()">Începe Testul</button>
+            </form>
+
+            <div id="quizSection" style="display: none;">
+                <div class="question" id="questionText"></div>
+                <input type="text" id="answerInput" class="answer-input" placeholder="Introdu răspunsul tău">
+
+                <button class="btn btn-success btn-quiz" onclick="submitAnswer()">Trimite Răspunsul</button>
+
+                <div class="lives" id="livesText">Vieți: ❤️❤️❤️</div>
+                <div id="imageContainer"></div>
+            </div>
+
+            <div id="resultSection" class="result" style="display: none;">
+                <div id="resultText"></div>
+                <div id="correctAnswers"></div>
+                <button class="btn btn-secondary btn-quiz" onclick="restartQuiz()">Reia Testul</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentQuestion = 0;
+        let score = 0;
+        let lives = 3;
+        let correctAnswer = "";
+        let images = [];
+        let correctAnswersList = []; // Array pentru stocarea răspunsurilor corecte și întrebărilor
+
+        // Funcție pentru a obține lista de imagini din folderul GitHub
+        async function fetchImages() {
+            const response = await fetch('https://api.github.com/repos/Casigas/Asc_joc/contents/');
+            const data = await response.json();
+
+            // Filtrăm doar fișierele cu extensiile dorite
+            images = data
+                .filter(file => file.type === 'file' && (file.name.endsWith('.png') || file.name.endsWith('.jpg')))
+                .map(file => file.name);
+        }
+
+        async function startQuiz() {
+            // Asigură-te că imaginile sunt încărcate înainte de a începe quiz-ul
+            await fetchImages();
+
+            const name = document.getElementById('nameInput').value;
+            const difficulty = document.getElementById('difficultySelect').value;
+
+            if (name === "") {
+                alert("Te rog introdu numele tău.");
+                return;
+            }
+
+            // Setează numărul de vieți în funcție de dificultate
+            if (difficulty === "easy") {
+                lives = 3;
+            } else if (difficulty === "medium") {
+                lives = 2;
+            } else {
+                lives = 1;
+            }
+
+            correctAnswersList = []; // Resetează lista de răspunsuri corecte
+
+            currentQuestion = 0;
+            score = 0;
+
+            document.getElementById('livesText').innerHTML = "Vieți: " + "❤️".repeat(lives);
+            document.getElementById('quizForm').style.display = "none";
+            document.getElementById('quizSection').style.display = "block";
+
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (currentQuestion < 5) { // Setăm numărul de întrebări la 5
+                const randomIndex = Math.floor(Math.random() * images.length);
+                correctAnswer = images[randomIndex].split('.')[0]; // Obține numele fișierului fără extensie
+
+                document.getElementById('questionText').innerHTML = "Ce piesă este aceasta?";
+                document.getElementById('answerInput').value = "";
+
+                // Afișează imaginea
+                const imageElement = document.createElement('img');
+                imageElement.src = `https://raw.githubusercontent.com/Casigas/Asc_joc/main/${images[randomIndex]}`;
+                imageElement.alt = "Imagine asociată întrebării";
+
+                const imageContainer = document.getElementById('imageContainer');
+                imageContainer.innerHTML = ""; // Șterge imaginile anterioare
+                imageContainer.appendChild(imageElement); // Adaugă imaginea nouă
+
+            } else {
+                showResults();
+            }
+        }
+
+        function submitAnswer() {
+            let answer = document.getElementById('answerInput').value;
+            if (answer === "") {
+                alert("Te rog introdu un răspuns.");
+                return;
+            }
+
+            // Elimină spațiile din răspunsul utilizatorului și răspunsul corect
+            answer = answer.replace(/\s+/g, '').toLowerCase();
+            const formattedCorrectAnswer = correctAnswer.replace(/\s+/g, '').toLowerCase();
+
+            if (answer === formattedCorrectAnswer) {
+                score++;
+            } else {
+                lives--;
+                updateLivesText();
+                if (lives === 0) {
+                    showResults();
+                    return;
+                }
+            }
+
+            // Adaugă întrebarea și răspunsul corect în lista de răspunsuri corecte
+            correctAnswersList.push({
+                question: "Ce piesă este aceasta?",
+                correctAnswer: correctAnswer
+            });
+
+            currentQuestion++;
+            loadQuestion();
+        }
+
+        function updateLivesText() {
+            document.getElementById('livesText').innerHTML = "Vieți: " + "❤️".repeat(lives);
+        }
+
+        function showResults() {
+            document.getElementById('quizSection').style.display = "none";
+            document.getElementById('resultSection').style.display = "block";
+
+            let correctAnswersHTML = "<h3>Răspunsuri corecte:</h3><ul>";
+            correctAnswersList.forEach((item, index) => {
+                correctAnswersHTML += `<li>Întrebarea ${index + 1}: ${item.question} - Răspuns corect: ${item.correctAnswer}</li>`;
+            });
+            correctAnswersHTML += "</ul>";
+
+            document.getElementById('resultText').innerHTML = `Ai terminat testul! Scorul tău: ${score}/5`;
+            document.getElementById('correctAnswers').innerHTML = correctAnswersHTML;
+        }
+
+        function restartQuiz() {
+            document.getElementById('quizForm').style.display = "block";
+            document.getElementById('quizSection').style.display = "none";
+            document.getElementById('resultSection').style.display = "none";
+        }
+    </script>
+
+</body>
+
+</html>
